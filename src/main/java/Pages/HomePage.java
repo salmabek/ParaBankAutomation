@@ -9,6 +9,8 @@ public class HomePage {
     private final By Register = By.linkText("Register");
     private final By LogOut = By.linkText("Log Out");
     private final By openNewAccount = By.linkText("Open New Account");
+    private final By findTransactions = By.linkText("Find Transactions");
+
 
     public HomePage(WebDriver driver)
     {
@@ -31,5 +33,12 @@ public class HomePage {
     {
         driver.findElement(openNewAccount).click();
         return  new AccountsPage(driver);
+    }
+
+    public FindTransactionsPage goToFindTransactionPage()
+    {
+
+        driver.findElement(findTransactions).click();
+        return new FindTransactionsPage(driver);
     }
 }

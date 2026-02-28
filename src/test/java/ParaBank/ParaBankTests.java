@@ -3,10 +3,7 @@ package ParaBank;
 import AddUser.PasswordGenerator;
 import AddUser.UserGenerator;
 import Base.BasesTest;
-import Pages.AccountsPage;
-import Pages.HomePage;
-import Pages.LoginPage;
-import Pages.RegisterPage;
+import Pages.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -14,7 +11,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import javax.lang.model.util.Elements;
 import java.time.Duration;
 import java.util.List;
 
@@ -23,6 +19,8 @@ import static java.lang.IO.println;
 public class ParaBankTests extends BasesTest {
     private HomePage homePage;
     private final By succeedOpenedAccount = By.xpath("//h1[text()='Account Opened!']");
+    private final By results = By.xpath("//div[@id='showResult']//h1");
+    private final By openNewAccount = By.linkText("Open New Account");
 
 
 
@@ -49,17 +47,26 @@ public class ParaBankTests extends BasesTest {
         /*Open a new account ***/
        AccountsPage accountsPage = homePage.goToOpenNewAccount();
        accountsPage.createNewAccount(driver);
-        /* Wait until the <h1> element with text "Account Opened" is visible into the homepage */
+       /* Wait until the <h1> element with text "Account Opened" is visible into the homepage */
         String openedAccountText = wait.until( ExpectedConditions.visibilityOfElementLocated(succeedOpenedAccount)).getText();
         Assert.assertEquals(openedAccountText, "Account Opened!");
-
+       /* Get All Account ***/
         accountsPage.getAllAccounts(driver);
+        /*Transfer ***/
+        TransferPage transferPage = new TransferPage(driver);
+        transferPage.transferAccount("50");
 
+        FindTransactionsPage findTransactionsPage = homePage.goToFindTransactionPage();
+        List<WebElement> listTransactions= findTransactionsPage.getTransactions("01-01-2020","02-29-2026");
 
-        
-
-
-
+        for (WebElement row : listTransactions) {
+            System.out.println(
+                    row.findElement(By.xpath("./td[1]")).getText() + " | " +
+                            row.findElement(By.xpath("./td[2]")).getText() + " | " +
+                            row.findElement(By.xpath("./td[3]")).getText() + " | " +
+                            row.findElement(By.xpath("./td[4]")).getText()
+            );
+        }
     }
 }
 
