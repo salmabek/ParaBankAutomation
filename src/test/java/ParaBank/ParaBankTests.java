@@ -58,7 +58,7 @@ public class ParaBankTests extends BasesTest {
         accountsPage.getAllAccounts(driver);
         /*Transfer ***/
         TransferPage transferPage = new TransferPage(driver);
-        transferPage.transferAccount("50");
+        transferPage.transferAccount("500");
         FindTransactionsPage findTransactionsPage = homePage.goToFindTransactionPage();
         List<WebElement> listTransactions= findTransactionsPage.getTransactions("01-01-2020","02-29-2026");
 
