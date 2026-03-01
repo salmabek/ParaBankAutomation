@@ -50,14 +50,27 @@ public class ParaBankTests extends BasesTest {
        /* Wait until the <h1> element with text "Account Opened" is visible into the homepage */
         String openedAccountText = wait.until( ExpectedConditions.visibilityOfElementLocated(succeedOpenedAccount)).getText();
         Assert.assertEquals(openedAccountText, "Account Opened!");
+
+        WebElement newAccElement = driver.findElement(By.id("newAccountId")); // ou via le message affiché
+         String newAccountNumber = newAccElement.getText().trim();
+        System.out.println("New Account Number: " + newAccountNumber);
        /* Get All Account ***/
         accountsPage.getAllAccounts(driver);
         /*Transfer ***/
         TransferPage transferPage = new TransferPage(driver);
         transferPage.transferAccount("50");
-
         FindTransactionsPage findTransactionsPage = homePage.goToFindTransactionPage();
         List<WebElement> listTransactions= findTransactionsPage.getTransactions("01-01-2020","02-29-2026");
+
+        wait.until(ExpectedConditions.visibilityOfElementLocated(
+                By.id("transactionTable")));
+        List<WebElement> headers = driver.findElements(
+                By.xpath("//table[@id='transactionTable']/thead/tr/th"));
+
+        for (WebElement header : headers) {
+            System.out.print(header.getText() + " | ");
+        }
+        System.out.println();
 
         for (WebElement row : listTransactions) {
             System.out.println(

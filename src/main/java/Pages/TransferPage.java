@@ -10,97 +10,126 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 import java.util.List;
 
+
 public class TransferPage {
 
-    WebDriver driver;
-    WebDriverWait wait;
+    private WebDriver driver;
+    private WebDriverWait wait;
 
-    By linkTransfer = By.linkText("Transfer Funds");
+    private By linkTransfer = By.linkText("Transfer Funds");
+    private By fromAccountSelect = By.id("fromAccountId");
+    private By toAccountSelect = By.id("toAccountId");
+    private By amountField = By.id("amount");
+    private By transferButton = By.cssSelector("input[value='Transfer']");
+    private By successTitle = By.xpath("//h1[contains(text(),'Transfer Complete')]");
+    private By accountsOverviewLink = By.linkText("Accounts Overview");
+    private By accountTable = By.id("accountTable");
 
     public TransferPage(WebDriver driver) {
         this.driver = driver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
     }
 
-    // Méthode principale pour transférer
     public void transferAccount(String amount) {
 
-        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-        // 1️⃣ Aller sur Transfer Funds
-        driver.findElement(linkTransfer).click();
+        // 1️⃣ Go to Accounts Overview
+        driver.findElement(accountsOverviewLink).click();
 
+        By accountsLocator = By.xpath("//table[@id='accountTable']//td/a");
 
-        // 2️⃣ Sélectionner From Account
-        WebElement fromAccountElement = wait.until(
-                ExpectedConditions.presenceOfElementLocated(By.id("fromAccountId"))
-        );
-        Select fromAccount = new Select(fromAccountElement);
-        wait.until(d -> fromAccount.getOptions().size() > 1);
-        fromAccount.selectByIndex(0);
+        // Wait until accounts are loaded
+        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(accountsLocator, 0));
 
-        // 3️⃣ Sélectionner To Account
-        WebElement toAccountElement = driver.findElement(By.id("toAccountId"));
-        Select toAccount = new Select(toAccountElement);
-        wait.until(d -> toAccount.getOptions().size() > 1);
-        toAccount.selectByIndex(1);
+        List<WebElement> accounts = driver.findElements(accountsLocator);
 
-        String fromAccNumber = fromAccount.getFirstSelectedOption().getText();
-        String toAccNumber = toAccount.getFirstSelectedOption().getText();
+        System.out.println("Accounts found: " + accounts.size());
 
-        System.out.println("From Account: " + fromAccNumber);
-        System.out.println("To Account: " + toAccNumber);
+        if (accounts.size() < 2) {
+            throw new RuntimeException("Not enough accounts to perform transfer. Found: " + accounts.size());
+        }
 
-        // 4️⃣ Lire solde avant transfert
+        String fromAccNumber = accounts.get(0).getText().trim();
+        String toAccNumber = accounts.get(1).getText().trim();
+
         double fromBalanceBefore = getAccountBalance(fromAccNumber);
         double toBalanceBefore = getAccountBalance(toAccNumber);
 
-        System.out.println("From Account Balance BEFORE: $" + fromBalanceBefore);
-        System.out.println("To Account Balance BEFORE: $" + toBalanceBefore);
+        System.out.println("From BEFORE: " + fromBalanceBefore);
+        System.out.println("To BEFORE: " + toBalanceBefore);
 
-
+        // 2️⃣ Go to Transfer Funds page
         driver.findElement(linkTransfer).click();
 
-        // 5️⃣ Remplir le montant
-        WebElement amountField = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("amount"))
-        );
-        amountField.clear();
-        amountField.sendKeys(amount);
-        System.out.println("Amount to transfer: $" + amountField.getAttribute("value"));
+        // 3️⃣ Select correct accounts by visible text
+        Select fromAccount = new Select(wait.until(
+                ExpectedConditions.visibilityOfElementLocated(fromAccountSelect)));
+        fromAccount.selectByVisibleText(fromAccNumber);
 
-        // 6️⃣ Cliquer sur Transfer
-        WebElement transferButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("input[value='Transfer']"))
-        );
-        transferButton.click();
+        Select toAccount = new Select(wait.until(
+                ExpectedConditions.visibilityOfElementLocated(toAccountSelect)));
+        toAccount.selectByVisibleText(toAccNumber);
 
-        // 7️⃣ Attendre le message de confirmation
-        WebElement successMessage = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("showResult"))
-        );
-        System.out.println("Transfer Result: " + successMessage.getText());
+        // 4️⃣ Enter amount
+        WebElement amountInput = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(amountField));
+        amountInput.clear();
+        amountInput.sendKeys(amount);
 
-        // 8️⃣ Lire les soldes après transfert
+        System.out.println("Entered amount: " + amountInput.getAttribute("value"));
+
+        // 5️⃣ Click Transfer
+        wait.until(ExpectedConditions.elementToBeClickable(transferButton)).click();
+
+        // 6️⃣ Wait for Transfer Complete
+        wait.until(ExpectedConditions.visibilityOfElementLocated(successTitle));
+
+        System.out.println("Transfer completed.");
+
+        // Small stabilization wait (ParaBank demo quirk)
+        wait.until(driver -> driver.getPageSource().contains("Transfer Complete"));
+
+        // 7️⃣ Go back to Accounts Overview
+        driver.findElement(accountsOverviewLink).click();
+
+        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(accountsLocator, 0));
+
         double fromBalanceAfter = getAccountBalance(fromAccNumber);
         double toBalanceAfter = getAccountBalance(toAccNumber);
 
-        System.out.println("From Account Balance AFTER: $" + fromBalanceAfter);
-        System.out.println("To Account Balance AFTER: $" + toBalanceAfter);
-    }
+        System.out.println("From AFTER: " + fromBalanceAfter);
+        System.out.println("To AFTER: " + toBalanceAfter);
 
+        double amountValue = Double.parseDouble(amount);
+
+        if (fromBalanceAfter == fromBalanceBefore &&
+                toBalanceAfter == toBalanceBefore) {
+
+            throw new RuntimeException("Balances did NOT change after transfer.");
+        }
+
+        System.out.println("Transfer verified successfully ✅");
+    }
     private double getAccountBalance(String accountNumber) {
 
-        driver.findElement(By.linkText("Accounts Overview")).click();
-        driver.navigate().refresh();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("accountTable")));
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//table[@id='accountTable']//a[contains(text(),'"
-                + accountNumber.trim() + "')]/ancestor::tr/td[2]")));
-        WebElement balanceElement = driver.findElement(
-                By.xpath("//table[@id='accountTable']//a[contains(text(),'"
-                        + accountNumber.trim() + "')]/ancestor::tr/td[2]")
+        driver.findElement(accountsOverviewLink).click();
+
+        wait.until(ExpectedConditions.visibilityOfElementLocated(accountTable));
+
+        By balanceLocator = By.xpath(
+                "//table[@id='accountTable']//tr[td/a[normalize-space()='"
+                        + accountNumber.trim() + "']]/td[2]"
         );
 
-        String balanceText = balanceElement.getText().trim();
+        // Wait until specific account row is present
+        WebElement balanceElement = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(balanceLocator)
+        );
 
-        return Double.parseDouble(balanceText.replace("$", "").replace(",", ""));
+        String balanceText = balanceElement.getText()
+                .replace("$", "")
+                .replace(",", "")
+                .trim();
+
+        return Double.parseDouble(balanceText);
     }
 }
